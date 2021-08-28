@@ -1,12 +1,47 @@
 ---
-- name: Installs a package and prints the result 
-  hosts: all 
+- name: Deploy and start apache httpd service 
+  hosts: webserver
+  vars:
+    web_pkg: httpd 
+    firewall_pkg: firewalld 
+    web_service: httpd 
+    firewall_service: firewalld 
+    python_pkg: python3-PyMySQL 
+    rule: http 
   tasks: 
-  - name: Install the package 
+  - name: Required packages are installed 
     yum: 
-      name: httpd 
-      state: installed 
-    register: install_result 
-  - name: debug 
-    debug:
-      var: install_result 
+      name: 
+      - "{{ web_pkg }}"
+      - "{{ firewall_pkg }}"
+      - "{{ python_pkg }}"
+      state: latest 
+  - name: The {{ firewall_service }} is started and enabled 
+    service:
+      name: "{{ firewall_service }}"
+      state: started 
+      enabled: true 
+  - name: The {{ web_service }} is started and enabled 
+    service:
+      name: "{{ web_service }}"
+      state: started 
+      enabled: true
+  - name: web content is in place 
+    copy:
+      content: "Example web content"
+      dest: /var/wwww/html/index.html 
+  - name: The firewall port for {{ rule }} is open 
+    firewalld:
+      service: "{{ rule }}"
+      permanent: true 
+      immediate: true       
+      state: enabled
+      
+- name: Verify the apache service 
+  hosts: localhost
+  become: false 
+  tasks:
+  - name: Ensure the webserver is reachable 
+    uri:
+      url: http://servera.lab.example.com
+      status_code: 200 
